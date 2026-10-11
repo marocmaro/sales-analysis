@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "Phone_Market_Dashboard"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "def8c377-857f-5c49-8c7a-fc3e13c17aa1"
+  }
+}

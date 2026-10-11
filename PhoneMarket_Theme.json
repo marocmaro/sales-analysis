@@ -1,0 +1,29 @@
+{
+  "name": "Phone Market",
+  "dataColors": ["#2A78D6", "#EB6834", "#1BAF7A", "#EDA100", "#E87BA4", "#008300", "#4A3AA7", "#E34948"],
+  "background": "#FCFCFB",
+  "foreground": "#0B0B0B",
+  "tableAccent": "#2A78D6",
+  "good": "#0CA30C",
+  "neutral": "#FAB219",
+  "bad": "#D03B3B",
+  "maximum": "#14325C",
+  "center": "#A9C6EC",
+  "minimum": "#EAF1FB",
+  "textClasses": {
+    "title":   { "fontFace": "Segoe UI Semibold", "fontSize": 13, "color": "#0B0B0B" },
+    "header":  { "fontFace": "Segoe UI Semibold", "fontSize": 11, "color": "#52514E" },
+    "label":   { "fontFace": "Segoe UI", "fontSize": 10, "color": "#52514E" },
+    "callout": { "fontFace": "Segoe UI Bold", "fontSize": 28, "color": "#0B0B0B" }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [{ "color": { "solid": { "color": "#FCFCFB" } }, "transparency": 0 }],
+        "border": [{ "show": true, "color": { "solid": { "color": "#DCDCD8" } }, "radius": 8 }],
+        "dropShadow": [{ "show": false }]
+      }
+    },
+    "page": { "*": { "background": [{ "color": { "solid": { "color": "#F3F4F6" } }, "transparency": 0 }] } }
+  }
+}

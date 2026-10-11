@@ -1,0 +1,270 @@
+// =====================================================================
+//  Phone Market Dashboard: DAX measures (same as table _Measures in
+//  Phone_Market_Dashboard.pbip). Only needed if you rebuild by hand.
+//  Tables: Fact_Listing, Dim_Brand, Dim_Category, Dim_PriceBand, Promo_Lever
+// =====================================================================
+
+// ---------- Core ----------
+
+Total Listings =
+    COUNTROWS ( Fact_Listing )
+    // format: #,0
+
+Brands =
+    DISTINCTCOUNT ( Fact_Listing[brand_key] )
+    // format: #,0
+
+Est Units =
+    SUM ( Fact_Listing[monthly_units_min] )
+    // format: #,0
+
+Est Revenue =
+    SUM ( Fact_Listing[est_monthly_revenue] )
+    // format: $#,0
+
+Units per Listing =
+    DIVIDE ( [Est Units], [Total Listings] )
+    // format: #,0
+
+Revenue Share % =
+    DIVIDE ( [Est Revenue], CALCULATE ( [Est Revenue], ALLSELECTED () ) )
+    // format: 0.0%
+
+// ---------- Price ----------
+
+Avg Price =
+    AVERAGE ( Fact_Listing[price] )
+    // format: $#,0.00
+
+Median Price =
+    MEDIAN ( Fact_Listing[price] )
+    // format: $#,0.00
+
+Min Price =
+    MIN ( Fact_Listing[price] )
+    // format: $#,0.00
+
+Max Price =
+    MAX ( Fact_Listing[price] )
+    // format: $#,0.00
+
+% Listings Discounted =
+    DIVIDE ( CALCULATE ( [Total Listings], Fact_Listing[has_discount] = TRUE () ), [Total Listings] )
+    // format: 0.0%
+
+Median Discount % =
+    CALCULATE ( MEDIAN ( Fact_Listing[discount_pct] ), Fact_Listing[has_discount] = TRUE () )
+    // format: 0.0%
+
+// ---------- Customer ----------
+
+Avg Rating =
+    AVERAGE ( Fact_Listing[star_rating] )
+    // format: 0.00
+
+Total Reviews =
+    SUM ( Fact_Listing[num_ratings] )
+    // format: #,0
+
+Weighted Rating =
+    DIVIDE (
+        SUMX ( Fact_Listing, Fact_Listing[star_rating] * Fact_Listing[num_ratings] ),
+        CALCULATE ( SUM ( Fact_Listing[num_ratings] ), NOT ISBLANK ( Fact_Listing[star_rating] ) )
+    )
+    // format: 0.00
+
+// ---------- Drivers ----------
+
+Units per Listing - Discounted =
+    CALCULATE ( [Units per Listing], Fact_Listing[has_discount] = TRUE () )
+    // format: #,0
+
+Units per Listing - Not Discounted =
+    CALCULATE ( [Units per Listing], Fact_Listing[has_discount] = FALSE () )
+    // format: #,0
+
+Discount Uplift % =
+    DIVIDE ( [Units per Listing - Discounted], [Units per Listing - Not Discounted] ) - 1
+    // format: +0%;-0%;0%
+
+Units per Listing - Unlocked =
+    CALCULATE ( [Units per Listing], Fact_Listing[lock_status] = "Unlocked" )
+    // format: #,0
+
+Units per Listing - Carrier Locked =
+    CALCULATE ( [Units per Listing], Fact_Listing[lock_status] = "Carrier-locked" )
+    // format: #,0
+
+Unlocked vs Locked Ratio =
+    DIVIDE ( [Units per Listing - Unlocked], [Units per Listing - Carrier Locked] )
+    // format: 0.0x
+
+Renewed Revenue Share % =
+    DIVIDE ( CALCULATE ( [Est Revenue], Fact_Listing[condition] = "Renewed" ), [Est Revenue] )
+    // format: 0.0%
+
+Promo Units per Listing =
+    VAR lever = SELECTEDVALUE ( Promo_Lever[lever_key] )
+    RETURN
+        SWITCH ( lever,
+            1, CALCULATE ( [Units per Listing], Fact_Listing[has_discount] = TRUE () ),
+            2, CALCULATE ( [Units per Listing], Fact_Listing[has_discount] = FALSE () ),
+            3, CALCULATE ( [Units per Listing], Fact_Listing[has_coupon] = TRUE () ),
+            4, CALCULATE ( [Units per Listing], Fact_Listing[has_coupon] = FALSE () ),
+            5, CALCULATE ( [Units per Listing], Fact_Listing[is_prime] = TRUE () ),
+            6, CALCULATE ( [Units per Listing], Fact_Listing[is_prime] = FALSE () )
+        )
+    // format: #,0
+
+// ---------- Smartphones ----------
+
+Smartphone Revenue =
+    CALCULATE ( [Est Revenue], KEEPFILTERS ( Dim_Category[category_name] = "Smartphone" ) )
+    // format: $#,0
+
+Smartphone Units (badged) =
+    CALCULATE (
+        [Est Units],
+        KEEPFILTERS ( Dim_Category[category_name] = "Smartphone" ),
+        KEEPFILTERS ( Fact_Listing[monthly_units_min] > 0 )
+    )
+    // format: #,0
+
+Smartphone Price (badged) =
+    IF ( NOT ISBLANK ( [Smartphone Units (badged)] ), AVERAGE ( Fact_Listing[price] ) )
+    // format: $#,0
+
+// ---------- Stock risk ----------
+
+Low Stock Listings =
+    CALCULATE ( [Total Listings], Fact_Listing[is_low_stock] = TRUE () ) + 0
+    // format: #,0
+
+Low Stock Units Exposed =
+    CALCULATE ( [Est Units], Fact_Listing[is_low_stock] = TRUE () ) + 0
+    // format: #,0
+
+High Risk Listings =
+    CALCULATE ( [Total Listings], Fact_Listing[stock_risk] = "High risk" ) + 0
+    // format: #,0
+
+High Risk Revenue =
+    CALCULATE ( [Est Revenue], Fact_Listing[stock_risk] = "High risk" ) + 0
+    // format: $#,0
+
+Watch Price =
+    CALCULATE ( MAX ( Fact_Listing[price] ), KEEPFILTERS ( Fact_Listing[stock_risk] = "High risk" ) )
+    // format: $#,0.00
+
+Watch Stock Left =
+    CALCULATE ( MAX ( Fact_Listing[stock_left] ), KEEPFILTERS ( Fact_Listing[stock_risk] = "High risk" ) )
+    // format: #,0
+
+Watch Units per Month =
+    CALCULATE ( [Est Units], KEEPFILTERS ( Fact_Listing[stock_risk] = "High risk" ) )
+    // format: #,0
+
+Watch Revenue at Risk =
+    CALCULATE ( [Est Revenue], KEEPFILTERS ( Fact_Listing[stock_risk] = "High risk" ) )
+    // format: $#,0
+
+// ---------- Ranking ----------
+
+Brand Revenue Rank =
+    IF (
+        HASONEVALUE ( Dim_Brand[brand_name] ),
+        RANKX ( ALLSELECTED ( Dim_Brand[brand_name] ), [Est Revenue], , DESC, DENSE )
+    )
+    // format: 0
+
+Top 8 Brand Revenue =
+    IF ( [Brand Revenue Rank] <= 8, [Est Revenue] )
+    // format: $#,0
+
+Product Revenue Rank =
+    VAR cur = [Est Revenue]
+    RETURN
+        IF (
+            NOT ISBLANK ( cur ),
+            COUNTROWS ( FILTER ( ALLSELECTED ( Fact_Listing ), Fact_Listing[est_monthly_revenue] > cur ) ) + 1
+        )
+    // format: 0
+
+Top 8 Price =
+    IF ( [Product Revenue Rank] <= 8, MAX ( Fact_Listing[price] ) )
+    // format: $#,0.00
+
+Top 8 Units =
+    IF ( [Product Revenue Rank] <= 8, [Est Units] )
+    // format: #,0
+
+Top 8 Revenue =
+    IF ( [Product Revenue Rank] <= 8, [Est Revenue] )
+    // format: $#,0
+
+// ---------- Dynamic text ----------
+
+Top Brand Name =
+    MAXX ( TOPN ( 1, VALUES ( Dim_Brand[brand_name] ), [Est Revenue], DESC ), Dim_Brand[brand_name] )
+    // text measure
+
+Title - Brand Chart =
+    VAR topRev = CALCULATE ( [Est Revenue], TOPN ( 1, VALUES ( Dim_Brand[brand_name] ), [Est Revenue], DESC ) )
+    RETURN
+        "Top 8 brands: " & [Top Brand Name] & " leads with " & FORMAT ( DIVIDE ( topRev, [Est Revenue] ), "0%" )
+    // text measure
+
+Subtitle - Category Chart =
+    "Smartphones = " & FORMAT ( DIVIDE ( [Smartphone Revenue], [Est Revenue] ), "0%" ) & " of est. revenue in the current selection"
+    // text measure
+
+Selection Note =
+    "Snapshot 19 Sep 2024  |  " & FORMAT ( [Total Listings], "#,0" ) & " listings in view  |  lower-bound estimates"
+    // text measure
+
+Note - Listings =
+    "after removing 25 duplicates and 4 unpriced rows"
+    // text measure
+
+Note - Units =
+    "sum of 'X+ bought in past month' badges"
+    // text measure
+
+Note - Revenue =
+    "price x units (lower bound)"
+    // text measure
+
+Note - Price =
+    "range " & FORMAT ( [Min Price], "$#,0" ) & " to " & FORMAT ( [Max Price], "$#,0" )
+    // text measure
+
+Note - Rating =
+    FORMAT ( [Total Reviews], "#,0" ) & " reviews in total"
+    // text measure
+
+Note - Discount =
+    "median discount " & FORMAT ( [Median Discount %], "0%" )
+    // text measure
+
+Note - Discounted Units =
+    "vs " & FORMAT ( [Units per Listing - Not Discounted], "#,0" ) & " without discount (" & FORMAT ( [Discount Uplift %], "+0%;-0%" ) & ")"
+    // text measure
+
+Note - Unlocked Units =
+    "vs " & FORMAT ( [Units per Listing - Carrier Locked], "#,0" ) & " carrier-locked (" & FORMAT ( [Unlocked vs Locked Ratio], "0.0" ) & "x)"
+    // text measure
+
+Note - Low Stock =
+    FORMAT ( [Low Stock Units Exposed], "#,0" ) & " units / month exposed"
+    // text measure
+
+Note - High Risk =
+    FORMAT ( [High Risk Listings], "#,0" ) & " fast sellers (500+/month) with 10 or fewer units left"
+    // text measure
+
+// ---------- Calculated columns already created in Python (fact_listing.csv) ----------
+// stock_risk, stock_status, product_short, review_bucket (+ _order), sales_band_order, network
+
+// ---------- Helper table Promo_Lever (Power Query) ----------
+// #table(type table [lever_key = Int64.Type, lever = text],
+//   {{1,"Discount: yes"},{2,"Discount: no"},{3,"Coupon: yes"},{4,"Coupon: no"},{5,"Prime: yes"},{6,"Prime: no"}})

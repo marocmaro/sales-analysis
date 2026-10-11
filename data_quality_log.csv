@@ -1,0 +1,18 @@
+#,Issue,Column(s),Rows affected,Why it matters,Solution
+1,Exact duplicate rows,All columns,21,Same product scraped twice on different result pages → inflates counts/revenue,drop_duplicates() on all columns
+2,Near-duplicate ASINs,asin,4,Same product with slightly different price/stock,Keep first occurrence (best search rank); ASIN becomes primary key
+3,Numbers stored as text,3 price columns,340,"'$1,614.99 ' cannot be summed","Regex strip $ , spaces → float"
+4,Missing price & currency,"price, currency",4,Offer unavailable — no price to analyse,Removed; saved in rejected_rows.csv for audit
+5,Original price empty,product_original_price,192,"Null means 'no discount', not 'unknown'",list_price = price; discount = 0; has_discount flag
+6,HTML entities in titles,product_title,116,"'AT&amp;T', '6.5&quot;' break text search & brand rules",html.unescape() + whitespace trim
+7,Sales volume is free text,sales_volume,340,'1K+ bought in past month' is not numeric,Parse to integer lower bound (1K+ → 1000)
+8,Wrong values in sales_volume,sales_volume,21,'More Buying Choices' / 'List:' scraped from neighbouring page elements,Treated as missing badge
+9,Missing sales badge,sales_volume,20,Amazon hides badge below 50/month,"units = 0, band '<50 / not shown', flag sales_badge_shown"
+10,Two fields merged in one column,delivery,75,Stock text appended to delivery text,Regex split → stock_left + clean delivery
+11,Relative dates in text,delivery,337,"'Tomorrow, Sep 20' / 'Tue, Sep 24' not a date","Extract first date, year 2024, compute days_to_delivery vs snapshot 19-Sep-2024"
+12,Stock only as sentence,product_availability,75,'Only 3 left in stock' not numeric,Extract integer stock_left; is_low_stock ≤ 10
+13,Empty / constant columns,"unit_price, unit_count, currency",336,No analytical value,Dropped
+14,Coupon as free text,coupon_text,22,'Save 10%' vs 'Save $4.00' mixed types,Parse type + value → $ saving + net price
+15,No category column — mixed results,product_title,311,"Phone cases ($8) mixed with foldables ($1,615) distorts averages","Rule-based classifier → 5 categories, manually reviewed"
+16,Inconsistent brand names,product_title,68,"SAMSUNG vs Samsung, Moto vs Motorola, 'TracFone | Motorola…'",Strip carrier prefixes; regex mapping table → 41 canonical brands
+17,Rating null with 0 reviews,product_star_rating,3,Would be wrong to treat as 0 stars,Keep NULL; is_rated flag; 'Not rated' band
